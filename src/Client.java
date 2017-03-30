@@ -212,9 +212,12 @@ public class Client extends JPanel implements ActionListener, Runnable {
     private void disconnect() {
         if(output != null) {
             try {
-                DisconnectMessage dis = new DisconnectMessage();
-                output.writeObject(dis); // Request that you disconnect from the server
-                updateMessageScreen(dis);
+                if(connected) {
+                    connected = false;
+                    DisconnectMessage dis = new DisconnectMessage();
+                    output.writeObject(dis); // Request that you disconnect from the server
+                    updateMessageScreen(dis);
+                }
             } catch (IOException e) {
                 System.err.println("Error Disconnecting");
             }
