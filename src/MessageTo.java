@@ -1,10 +1,13 @@
 /**
- * Created by shane on 28/03/2017.
+ * @author Shane Birdsall
+ * ID: 14870204
  * MessageTo is used for private messages between two clients.
  */
-public class MessageTo extends Message {
-
-    MessageTo(String message) {
-        super(message);
+class MessageTo extends Message {
+    private String receiver;
+    MessageTo(String message, String sender, String receiver) {
+        super(message, sender);
+        this.receiver = receiver;
     }
+    String getReceiver() { return receiver; }
 }

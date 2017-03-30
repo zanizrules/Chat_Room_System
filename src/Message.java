@@ -1,12 +1,17 @@
-/**
- * Created by shane on 28/03/2017.
- * The Message class is an abstract class aimed to define the requirements of a message.
- * Proposed subclasses are a DisconnectMessage, BroadcastMessage, and MessageTo.
- */
-abstract class Message {
-    private String message;
+import java.io.Serializable;
 
-    Message(String message) {
+/**
+ * @author Shane Birdsall
+ * ID: 14870204
+ * The Message class is an abstract class aimed to define the requirements of a message.
+ * All messages must be Serializable in order to be sent between the server and clients.
+ */
+abstract class Message implements Serializable {
+    private String message, sender;
+    Message(String message, String sender) {
         this.message = message;
+        this.sender = sender;
     }
+    String getMessage() { return message; }
+    String getSender() { return sender; }
 }
