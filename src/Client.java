@@ -55,23 +55,20 @@ public class Client extends JPanel implements ActionListener, Runnable {
         disconnectButton.setPreferredSize(new Dimension(LIST_WIDTH, 30));
         disconnectButton.addActionListener(this);
         listPanel.add(disconnectButton, BorderLayout.SOUTH);
-        add(listPanel, BorderLayout.WEST);
-
-        // Create and add online users list
-        listOfOtherClients = new JList<String>(connectedClients.getClientListModel());
+        listOfOtherClients = new JList<String>(connectedClients.getClientListModel()); // online users list
         listPanel.add(listOfOtherClients, BorderLayout.NORTH);
+        add(listPanel, BorderLayout.WEST); // left side
 
         // Add message screen
         JPanel messagePanel = new JPanel(new BorderLayout());
         messageScreen = new JTextArea();
         messageScreen.setEditable(false);
         messageScreen.setLineWrap(true);
-        messageScreen.setPreferredSize(new Dimension(FRAME_WIDTH - LIST_WIDTH, FRAME_HEIGHT / 2));
-        messageScreen.setBorder(BorderFactory.createTitledBorder("Live Chat"));
         JScrollPane scrollTextPane = new JScrollPane(messageScreen);
         scrollTextPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        add(scrollTextPane, BorderLayout.CENTER);
-        messagePanel.add(messageScreen, BorderLayout.CENTER);
+        scrollTextPane.setPreferredSize(new Dimension(FRAME_WIDTH - LIST_WIDTH, FRAME_HEIGHT - 80));
+        scrollTextPane.setBorder(BorderFactory.createTitledBorder("Live Chat"));
+        messagePanel.add(scrollTextPane, BorderLayout.NORTH);
 
         // Add user input section
         JPanel inputPanel = new JPanel(new BorderLayout());
@@ -92,11 +89,11 @@ public class Client extends JPanel implements ActionListener, Runnable {
         JPanel buttonPanel = new JPanel(new BorderLayout());
         buttonPanel.add(sendButton, BorderLayout.NORTH);
         buttonPanel.add(broadcastButton, BorderLayout.SOUTH);
-        // Combine
+
         inputPanel.add(buttonPanel, BorderLayout.EAST);
         inputPanel.setBorder(BorderFactory.createTitledBorder("Message"));
-        messagePanel.add(inputPanel, BorderLayout.AFTER_LAST_LINE);
-        add(messagePanel);
+        messagePanel.add(inputPanel, BorderLayout.SOUTH);
+        add(messagePanel, BorderLayout.EAST); // right side
     }
 
     @Override
@@ -136,9 +133,13 @@ public class Client extends JPanel implements ActionListener, Runnable {
         if(source == disconnectButton) {
             disconnect();
         } else if(source == sendButton) {
-            sendMessageTo();
+            if(userInput.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please enter a valid message!");
+            } else sendMessageTo();
         } else if(source == broadcastButton) {
-            sendBroadcastMessage();
+            if(userInput.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please enter a valid message!");
+            } else sendBroadcastMessage();
         }
     }
 
