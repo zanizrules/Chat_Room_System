@@ -48,7 +48,6 @@ public class Server {
                 System.out.println(e.getMessage());
             } catch (IOException e) {
                 System.err.println("Can't accept client connection: " + e);
-                stopServer = true;
             }
         }
         try {
@@ -90,34 +89,43 @@ public class Server {
             try {
                 Message receivedMessage;
                 clientID = (String) in.readObject(); // Receive client name
-                System.out.println("Starting up new connection with " + clientID);
-                connectedClients.put(clientID, this); // Map client ID to clients connection
-                out.writeObject(new WelcomeMessage(clientID)); // Send welcome message to connected client
-                do {
-                    receivedMessage = (Message) in.readObject(); // Receive message from connected client
-                    if(receivedMessage instanceof MessageTo) { // Handle private message
-                        connectedClients.get(((MessageTo) receivedMessage).getReceiver()).out.writeObject(receivedMessage);
-                    } else if(receivedMessage instanceof BroadcastMessage) { // Handle public message
-                        for (Object o : connectedClients.entrySet()) {
-                            HashMap.Entry pair = (HashMap.Entry) o;
-                            Connection c = (Connection) pair.getValue();
-                            if(!c.clientID.equals(clientID)) { // Stops sending broadcast to yourself
-                                c.out.writeObject(receivedMessage); // Send out broadcast
+
+                if(connectedClients.keySet().contains(clientID)) {
+                    // User with that ID is already online
+                    out.writeObject(new IDAlreadyUsedMessage());
+                } else {
+                    System.out.println("Starting up new connection with " + clientID);
+                    connectedClients.put(clientID, this); // Map client ID to clients connection
+                    out.writeObject(new WelcomeMessage(clientID)); // Send welcome message to connected client
+                    do {
+                        receivedMessage = (Message) in.readObject(); // Receive message from connected client
+                        if(receivedMessage instanceof MessageTo) { // Handle private message
+                            connectedClients.get(((MessageTo) receivedMessage).getReceiver()).out.writeObject(receivedMessage);
+                        } else if(receivedMessage instanceof BroadcastMessage) { // Handle public message
+                            for (Object o : connectedClients.entrySet()) {
+                                HashMap.Entry pair = (HashMap.Entry) o;
+                                Connection c = (Connection) pair.getValue();
+                                if(!c.clientID.equals(clientID)) { // Stops sending broadcast to yourself
+                                    c.out.writeObject(receivedMessage); // Send out broadcast
+                                }
                             }
                         }
-                    }
-                    Thread.sleep(1000); // Wait before processing another message from the client
-                } while(!(receivedMessage instanceof DisconnectMessage)); // Stop after the user sends a disconnect request
+                        Thread.sleep(1000); // Wait before processing another message from the client
+                    } while(!(receivedMessage instanceof DisconnectMessage)); // Stop after the user sends a disconnect request
+                }
                 System.out.println("Closing connection with " + clientSocket.getInetAddress());
+            } catch(SocketException e) {
+                System.err.println("Client disconnected ");
             } catch(IOException | ClassNotFoundException | InterruptedException e) {
                 e.printStackTrace();
             } finally { // Close all connections. Stop all threads.
                 try {
-                    stopServer = true;
                     if(out != null) out.close();
                     if(in != null) in.close();
                     if(clientSocket != null) clientSocket.close();
-                    if(connectedClients != null && this.clientID != null) connectedClients.remove(this.clientID);
+                    if(connectedClients != null && this.clientID != null) {
+                        connectedClients.remove(this.clientID);
+                    }
                 } catch(IOException e) {
                     System.out.println(e.getMessage());
                 }

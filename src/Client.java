@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -102,15 +104,27 @@ public class Client extends JPanel implements ActionListener, Runnable {
         try {
             Message received;
             output.writeObject(getClientID()); // Send client name
+            received = (Message) input.readObject(); // Receive message
+            if(received instanceof WelcomeMessage) {
+                updateMessageScreen(received); // Print welcome message to GUI
+            } else if(received instanceof IDAlreadyUsedMessage) {
+                connected = false;
+                JOptionPane.showMessageDialog(frame, "The username you have chosen is already in use! " +
+                        "\nPlease try reconnecting using a different name");
+                System.exit(-1);
+            }
             while (connected) { // While connected to server
                 received = (Message) input.readObject(); // Receive message
                 updateMessageScreen(received); // Print message to GUI
                 Thread.sleep(300);
             }
+        } catch (EOFException e) {
+            connected = false; // End of stream reached. Disconnect.
         } catch (ClassNotFoundException | InterruptedException e) {
             e.printStackTrace();
         } catch (SocketException e) {
             JOptionPane.showMessageDialog(frame, "Connection to the chat server has been lost");
+            System.exit(-1);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -160,7 +174,7 @@ public class Client extends JPanel implements ActionListener, Runnable {
                     updateMessageScreen(message); // Write broadcast to GUI
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error: You are not connected to the chat server!");
             }
         }
     }
@@ -177,7 +191,7 @@ public class Client extends JPanel implements ActionListener, Runnable {
                     updateMessageScreen(message); // Write private message to GUI
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error: You are not connected to the chat server!");
             }
         }
     }
@@ -201,13 +215,14 @@ public class Client extends JPanel implements ActionListener, Runnable {
                 output.writeObject(dis); // Request that you disconnect from the server
                 updateMessageScreen(dis);
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("Error Disconnecting");
             }
         }
+
     }
 
     /* ---------------------- GUI related methods ---------------------- */
-    private void updateMessageScreen(Message mes) {
+    synchronized private void updateMessageScreen(Message mes) {
         if (mes.getSender().equals(getClientID())) { // If it is a message you sent prefix it with "Me"
             messageScreen.append("Me");
         } else messageScreen.append(mes.getSender()); // Otherwise prefix it with the senders ID
@@ -229,6 +244,13 @@ public class Client extends JPanel implements ActionListener, Runnable {
         client.connectToServer(); // Establish connection with server
         frame = new JFrame("Chat Client");
         positionFrame(client); // Position and display window
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                client.disconnect();
+                System.exit(0);
+            }
+        });
     }
 
     private static void positionFrame(JPanel panel) {
@@ -318,17 +340,16 @@ public class Client extends JPanel implements ActionListener, Runnable {
                     // Notify client of newly connected users
                     for(String newClient : update.getNewClients()) {
                         connectedClients.add(newClient);
-                        // If the client has just connected do not notify about all of the already connected clients
-                        if(!initialConnect) {
+                        if(!initialConnect) { // If just connected don't notify for all clients already connected
                             updateMessageScreen(new NewClientMessage(newClient));
-                        } else initialConnect = false;
-                    }
+                        }
+                    } if(initialConnect) initialConnect = false;
                     // Notify client of users who have disconnected
                     for(String disconnectedClient : update.getDisconnectedClients()) {
                         connectedClients.remove(disconnectedClient);
                         updateMessageScreen(new DisconnectedClientMessage(disconnectedClient));
                     }
-                    Thread.sleep(3000); // Wait before requesting another update
+                    Thread.sleep(300); // Wait before requesting another update
                 }
             } catch (IOException | ClassNotFoundException | InterruptedException e) {
                 e.printStackTrace();
@@ -374,10 +395,16 @@ public class Client extends JPanel implements ActionListener, Runnable {
         public void actionPerformed(ActionEvent e) {
             Object source = e.getSource();
             if(source == enterButton) {
-                setClientID(getUsername());
-                setHostIP(getHostIP());
-                frame.dispose();
-                startClientGUI();
+                if(getUsername().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please enter a username!");
+                } else if(getHostIP().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Please enter the servers IP Address!");
+                } else {
+                    setClientID(getUsername());
+                    setHostIP(getHostIP());
+                    frame.dispose();
+                    startClientGUI();
+                }
             }
         }
     }
